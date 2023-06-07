@@ -8,6 +8,7 @@ import netifaces
 import ipaddress
 import subprocess
 import concurrent.futures
+import platform
 
 app = Flask(__name__)
 
@@ -24,11 +25,16 @@ gateway_ip = gateways['default'][netifaces.AF_INET][0]
 # itterares to the ips and sends them a ping request to see if they are active 
 def ping_ip(ip):
     try:
-        result = subprocess.run(['ping', '-n', '1', '-w', '100', ip], capture_output=True)
+        if platform.system() == 'Windows':
+            result = subprocess.run(['ping', '-n', '1', '-w', '100', ip], capture_output=True)
+        else:
+            result = subprocess.run(['ping', '-c', '1', '-W', '1', ip], capture_output=True)
+
         if result.returncode == 0:
             return ip
     except Exception:
         pass
+
 
 
 # multithreds on multiple ips 
@@ -40,11 +46,10 @@ def get_active_ips(ip_address):
     with concurrent.futures.ThreadPoolExecutor() as executor:
         ip_list = [str(ip) for ip in network_range.hosts()]
         results = executor.map(ping_ip, ip_list)
-
         for ip in results:
             if ip:
                 active_ips.add(ip)
-
+    active_ips.remove(gateway_ip)
     return active_ips
 
 
