@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>ARP Spoofing</title>
+</head>
+
+<body>
+	<h1>ARP Spoofing</h1>
+	<form action="/spoof" method="post">
+		<label for="gateway_ip">Gateway IP:</label>
+		<input type="text" id="gateway_ip" name="gateway_ip" value="{{ gateway_ip }}" readonly><br>
+		<label for="target_ip">Target IP:</label>
+		<select id="target_ip" name="target_ip">
+			{% for ip in network_range %}
+			<option value="{{ ip }}">{{ ip }}</option>
+			{% endfor %}
+		</select>
+		<input type="submit" value="Spoof">
+	</form>
+
+	<script src="{{ url_for('static', filename='capture.js') }}"></script>
+</body>
+
+</html>

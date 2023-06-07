@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>ARP Spoofing - Captured Data</title>
+</head>
+
+<body>
+    <h1>ARP Spoofing - Captured Data</h1>
+    <button id="stop">Stop Capturing</button>
+    <h2>Captured Packets:</h2>
+    <ul id="packets">
+    </ul>
+    {% if error %}
+    <p>Error: {{ error }}</p>
+    {% endif %}
+    {% if data %}
+    <p>Intercepted Data: {{ data }}</p>
+    {% endif %}
+    <button onclick="location.href='{{ url_for('home') }}'">Restart</button>
+    <script src="{{ url_for('static', filename='capture.js') }}"></script>
+</body>
+
+</html>
