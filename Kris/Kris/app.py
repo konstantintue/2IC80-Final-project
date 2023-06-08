@@ -9,12 +9,15 @@ import ipaddress
 import subprocess
 import concurrent.futures
 import platform
+import socket
 
 app = Flask(__name__)
 
 gateways = netifaces.gateways()
 gateway_ip = gateways['default'][netifaces.AF_INET][0]
 
+hostname=socket.gethostname()   
+local_ip=socket.gethostbyname(hostname) 
 
 # def get_network_range(ip_address):
 #     network = ipaddress.ip_interface(ip_address+'/24')
@@ -46,10 +49,10 @@ def get_active_ips(ip_address):
     with concurrent.futures.ThreadPoolExecutor() as executor:
         ip_list = [str(ip) for ip in network_range.hosts()]
         results = executor.map(ping_ip, ip_list)
-        for ip in results:
-            if ip:
-                active_ips.add(ip)
-    active_ips.remove(gateway_ip)
+        active_ips = set(filter(None, results))
+
+    active_ips.discard(gateway_ip)
+    active_ips.discard(local_ip)
     return active_ips
 
 

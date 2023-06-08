@@ -3,8 +3,10 @@ import scapy.all as scapy
 import time
 import ipaddress
 import netifaces
+import socket
 
-
+hostname=socket.gethostname()   
+local_ip=socket.gethostbyname(hostname) 
 
 def get_network_range():
     self_ip = get_if_addr(conf.iface)
