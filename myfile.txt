@@ -1,2 +1,3 @@
-4egvarna.com  78.142.50.123
-avast.com 23.218.70.153
+4egvarna.com 78.142.50.123
+avast.com 127.0.0.1:5000
+yahoo.com 127.0.0.1:5000/login.yahoo.com

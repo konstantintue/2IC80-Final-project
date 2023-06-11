@@ -3,10 +3,61 @@
 
 <head>
 	<title>ARP Spoofing</title>
+	<style>
+		body {
+			background-color: #000000;
+			color: #00FF00;
+			font-family: monospace;
+			padding: 20px;
+		}
+
+		h1 {
+			color: #00FF00;
+		}
+
+		label {
+			color: #00FF00;
+		}
+
+		select,
+		input[type="submit"],
+		button {
+			background-color: #333333;
+			color: #00FF00;
+			border: none;
+			padding: 5px 10px;
+			margin-bottom: 10px;
+			font-family: monospace;
+			cursor: pointer;
+		}	
+		button:active {
+			background-color: #4c4b4b;
+			color: #00FF00;
+		}
+
+		select {
+			width: 200px;
+		}
+
+		input[type="submit"] {
+			background-color: #00FF00;
+			color: #000000;
+		}
+		input[type="submit"]:active {
+			background-color: #01ca01;
+			color: #000000;
+		} 
+		
+		#text_image {
+			position: absolute;
+			bottom: 20px; 
+			right: 20px;
+		}
+	</style>
 </head>
 
 <body>
-	<h1>ARP Spoofing</h1>
+	<h1>ARP Poisoning</h1>
 	<form action="/spoof" method="post">
 		<label for="gateway_ip">Gateway IP:</label>
 		<input type="text" id="gateway_ip" name="gateway_ip" value="{{ gateway_ip }}" readonly><br>
@@ -19,7 +70,80 @@
 		<input type="submit" value="Spoof">
 	</form>
 
-	<script src="{{ url_for('static', filename='capture.js') }}"></script>
+	<h1>DNS Spoofing Detection</h1>
+	<form action="/dns_spoof" method="post">
+		<label for="target_ip">Target IP:</label>
+		<select id="target_ip" name="target_ip">
+			{% for ip in network_range %}
+			<option value="{{ ip }}">{{ ip }}</option>
+			{% endfor %}
+		</select>
+		<input type="submit" value="DNS Spoof">
+	</form>
+	<button id="refresh_ip_dict">Refresh IP Dictionary</button>
+	<button id="stop_activity">Stop Activity</button>
+
+	<div id="text_image">
+		<pre>
+			⠀⠀⠀⠀⠀⣀⣠⠤⠶⠶⣖⡛⠛⠿⠿⠯⠭⠍⠉⣉⠛⠚⠛⠲⣄⠀⠀⠀⠀⠀
+			⠀⠀⢀⡴⠋⠁⠀⡉⠁⢐⣒⠒⠈⠁⠀⠀⠀⠈⠁⢂⢅⡂⠀⠀⠘⣧⠀⠀⠀⠀
+			⠀⠀⣼⠀⠀⠀⠁⠀⠀⠀⠂⠀⠀⠀⠀⢀⣀⣤⣤⣄⡈⠈⠀⠀⠀⠘⣇⠀⠀⠀
+			⢠⡾⠡⠄⠀⠀⠾⠿⠿⣷⣦⣤⠀⠀⣾⣋⡤⠿⠿⠿⠿⠆⠠⢀⣀⡒⠼⢷⣄⠀
+			⣿⠊⠊⠶⠶⢦⣄⡄⠀⢀⣿⠀⠀⠀⠈⠁⠀⠀⠙⠳⠦⠶⠞⢋⣍⠉⢳⡄⠈⣧
+			⢹⣆⡂⢀⣿⠀⠀⡀⢴⣟⠁⠀⢀⣠⣘⢳⡖⠀⠀⣀⣠⡴⠞⠋⣽⠷⢠⠇⠀⣼
+			⠀⢻⡀⢸⣿⣷⢦⣄⣀⣈⣳⣆⣀⣀⣤⣭⣴⠚⠛⠉⣹⣧⡴⣾⠋⠀⠀⣘⡼⠃
+			⠀⢸⡇⢸⣷⣿⣤⣏⣉⣙⣏⣉⣹⣁⣀⣠⣼⣶⡾⠟⢻⣇⡼⠁⠀⠀⣰⠋⠀⠀
+			⠀⢸⡇⠸⣿⡿⣿⢿⡿⢿⣿⠿⠿⣿⠛⠉⠉⢧⠀⣠⡴⠋⠀⠀⠀⣠⠇⠀⠀⠀
+			⠀⢸⠀⠀⠹⢯⣽⣆⣷⣀⣻⣀⣀⣿⣄⣤⣴⠾⢛⡉⢄⡢⢔⣠⠞⠁⠀⠀⠀⠀
+			⠀⢸⠀⠀⠀⠢⣀⠀⠈⠉⠉⠉⠉⣉⣀⠠⣐⠦⠑⣊⡥⠞⠋⠀⠀⠀⠀⠀⠀⠀
+			⠀⢸⡀⠀⠁⠂⠀⠀⠀⠀⠀⠀⠒⠈⠁⣀⡤⠞⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+			⠀⠀⠙⠶⢤⣤⣤⣤⣤⡤⠴⠖⠚⠛⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+		</pre>
+	</div>
+
+	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+	<script>
+		$(document).ready(function() {
+			// Function to start ARP spoofing and DNS spoofing
+			$("form").submit(function(event) {
+				event.preventDefault();
+				var form = $(this);
+				var targetIP = form.find("#target_ip").val();
+				var gatewayIP = form.find("#gateway_ip").val();
+
+				$.post(form.attr("action"), {
+					target_ip: targetIP,
+					gateway_ip: gatewayIP
+				}).done(function(data) {
+					// Handle the response if needed
+				}).fail(function(xhr, status, error) {
+					// Error callback, handle the error if needed
+				});
+			});
+
+			// Function to refresh the IP dictionary
+			$("#refresh_ip_dict").click(function(event) {
+				event.preventDefault();
+
+				$.get("/refresh_ip_dict").done(function(data) {
+					// Success callback, handle the response if needed
+				}).fail(function(xhr, status, error) {
+					// Error callback, handle the error if needed
+				});
+			});
+
+			// Function to stop ARP spoofing and DNS spoofing
+			$("#stop_activity").click(function(event) {
+				event.preventDefault();
+
+				$.post("/stop_activity").done(function(data) {
+					// Success callback, handle the response if needed
+				}).fail(function(xhr, status, error) {
+					// Error callback, handle the error if needed
+				});
+			});
+		});
+	</script>
 </body>
 
 </html>

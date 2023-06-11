@@ -45,7 +45,7 @@ def main():
     gateways = netifaces.gateways()
     gateway_ip = gateways['default'][netifaces.AF_INET][0]
 
-    target_ip =  "192.168.80.120"
+    target_ip =  "172.20.10.7"
     
     try:
         sent_packets_count = 0
